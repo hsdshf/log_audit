@@ -1,0 +1,40 @@
+Jun 15 08:23:17 server01 sshd[12345]: Failed password for root from 192.168.1.100 port 54321
+Jun 15 08:24:02 server01 sudo: pam_unix(sudo:auth): authentication failure; logname=user uid=1000 euid=0 tty=/dev/pts/0 ruser= rhost= 
+Jun 15 08:25:45 server01 kernel: [145678.234567] EXT4-fs (sda1): warning: mounting fs with errors
+Jun 15 08:26:11 server01 cron[2345]: (CRON) error (can't fork)
+Jun 15 08:27:33 server01 systemd[1]: Failed to start nginx.service - A high performance web server
+Jun 15 08:28:19 server01 sshd[12346]: Accepted password for admin from 10.0.0.5 port 2222
+Jun 15 08:29:05 server01 sudo:   user : command not found ; TERM=xterm-256color ; TSET=unknown
+Jun 15 08:30:42 server01 sshd[12347]: Invalid user hacker from 172.16.0.3
+Jun 15 08:31:27 server01 kernel: [146789.345678] VFS: file-max limit 65535 reached
+Jun 15 08:32:14 server01 sshd[12348]: Connection closed by 192.168.1.100 port 54321 [preauth]
+Jun 15 08:33:59 server01 systemd[1]: var-lib-docker.mount: Mount process finished, but there is no mount
+Jun 15 08:34:22 server01 sudo:   deploy : TTY=pts/1 ; PWD=/home/deploy ; USER=root ; COMMAND=/usr/bin/apt update
+Jun 15 08:35:47 server01 cron[2346]: (root) ERROR (Failed to connect to database)
+Jun 15 08:36:11 server01 sshd[12349]: Failed password for guest from 10.0.0.100 port 3333
+Jun 15 08:37:05 server01 kernel: [147890.456789] sd 0:0:0:0: [sda] No space left on device
+Jun 15 08:38:27 server01 systemd[1]: Started Session 123 of user admin.
+Jun 15 08:39:14 server01 sshd[12350]: Permission denied (publickey) for user test from 172.16.0.5 port 4444
+Jun 15 08:40:03 server01 sudo:   user : 3 incorrect password attempts ; TTY=pts/2 ; PWD=/home/user ; USER=root
+Jun 15 08:41:19 server01 sshd[12351]: Failed password for invalid_user from 192.168.1.200 port 5555
+Jun 15 08:42:35 server01 systemd[1]: Failed to start mysql.service - MySQL Community Server
+Jun 15 08:23:17 server01 sshd[12345]: Failed password for root from 192.168.1.100 port 54321
+Jun 15 08:24:02 server01 sudo: pam_unix(sudo:auth): authentication failure; logname=user uid=1000 euid=0 tty=/dev/pts/0 ruser= rhost=
+Jun 15 08:25:45 server01 kernel: [145678.234567] EXT4-fs (sda1): warning: mounting fs with errors
+Jun 15 08:26:11 server01 cron[2345]: (CRON) error (can't fork)
+Jun 15 08:27:33 server01 systemd[1]: Failed to start nginx.service - A high performance web server
+Jun 15 08:28:19 server01 sshd[12346]: Accepted password for admin from 10.0.0.5 port 2222
+Jun 15 08:29:05 server01 sudo:   user : command not found ; TERM=xterm-256color ; TSET=unknown
+Jun 15 08:30:42 server01 sshd[12347]: Invalid user hacker from 172.16.0.3
+Jun 15 08:31:27 server01 kernel: [146789.345678] VFS: file-max limit 65535 reached
+Jun 15 08:32:14 server01 sshd[12348]: Connection closed by 192.168.1.100 port 54321 [preauth]
+Jun 15 08:33:59 server01 systemd[1]: var-lib-docker.mount: Mount process finished, but there is no mount
+Jun 15 08:34:22 server01 sudo:   deploy : TTY=pts/1 ; PWD=/home/deploy ; USER=root ; COMMAND=/usr/bin/apt update
+Jun 15 08:35:47 server01 cron[2346]: (root) ERROR (Failed to connect to database)
+Jun 15 08:36:11 server01 sshd[12349]: Failed password for guest from 10.0.0.100 port 3333
+Jun 15 08:37:05 server01 kernel: [147890.456789] sd 0:0:0:0: [sda] No space left on device
+Jun 15 08:38:27 server01 systemd[1]: Started Session 123 of user admin.
+Jun 15 08:39:14 server01 sshd[12350]: Permission denied (publickey) for user test from 172.16.0.5 port 4444
+Jun 15 08:40:03 server01 sudo:   user : 3 incorrect password attempts ; TTY=pts/2 ; PWD=/home/user ; USER=root
+Jun 15 08:41:19 server01 sshd[12351]: Failed password for invalid_user from 192.168.1.200 port 5555
+Jun 15 08:42:35 server01 systemd[1]: Failed to start mysql.service - MySQL Community Server

@@ -1,0 +1,628 @@
+{
+    "rules": [
+        {
+            "name": "failed_login",
+            "pattern": "Failed password for .* from .* port \\d+",
+            "level": "critical",
+            "description": "SSH登录失败"
+        },
+        {
+            "name": "sudo_command",
+            "pattern": "sudo: .* : .* command not found",
+            "level": "warning",
+            "description": "sudo命令执行失败"
+        },
+        {
+            "name": "disk_space",
+            "pattern": "No space left on device",
+            "level": "critical",
+            "description": "磁盘空间不足"
+        },
+        {
+            "name": "service_error",
+            "pattern": "error|Error|ERROR",
+            "level": "warning",
+            "description": "服务错误"
+        },
+        {
+            "name": "permission_denied",
+            "pattern": "Permission denied",
+            "level": "warning",
+            "description": "权限被拒绝"
+        },
+        {
+            "name": "ssh_login",
+            "pattern": "Accepted password for .* from .* port \\d+",
+            "level": "info",
+            "description": "SSH登录成功"
+        },
+        {
+            "name": "invalid_user",
+            "pattern": "Invalid user .* from .*",
+            "level": "warning",
+            "description": "无效用户尝试登录"
+        },
+        {
+            "name": "connection_closed",
+            "pattern": "Connection closed by .* port \\d+",
+            "level": "info",
+            "description": "连接关闭"
+        },
+        {
+            "name": "authentication_failure",
+            "pattern": "authentication failure",
+            "level": "warning",
+            "description": "认证失败"
+        },
+        {
+            "name": "system_error",
+            "pattern": "systemd.*Failed to start",
+            "level": "critical",
+            "description": "系统服务启动失败"
+        },
+        {
+            "name": "brute_force_attempt",
+            "pattern": "POSSIBLE BREAK-IN ATTEMPT",
+            "level": "critical",
+            "description": "可能的暴力破解尝试"
+        },
+        {
+            "name": "ssh_root_login",
+            "pattern": "Accepted password for root from .* port \\d+",
+            "level": "warning",
+            "description": "root用户SSH登录"
+        },
+        {
+            "name": "nginx_404",
+            "pattern": "404 .* \"GET .* HTTP/1\\.1\"",
+            "level": "warning",
+            "description": "Nginx 404错误"
+        },
+        {
+            "name": "nginx_500",
+            "pattern": "500 .* \"GET .* HTTP/1\\.1\"",
+            "level": "critical",
+            "description": "Nginx服务器错误"
+        },
+        {
+            "name": "nginx_access_denied",
+            "pattern": "access forbidden by rule",
+            "level": "warning",
+            "description": "Nginx访问被拒绝"
+        },
+        {
+            "name": "apache_404",
+            "pattern": "File does not exist: .* 404",
+            "level": "warning",
+            "description": "Apache 404错误"
+        },
+        {
+            "name": "apache_500",
+            "pattern": "Internal Server Error",
+            "level": "critical",
+            "description": "Apache服务器错误"
+        },
+        {
+            "name": "apache_forbidden",
+            "pattern": "client denied by server configuration",
+            "level": "warning",
+            "description": "Apache访问被拒绝"
+        },
+        {
+            "name": "mysql_slow_query",
+            "pattern": "Query_time: [5-9]\\d?\\d\\.\\d+",
+            "level": "warning",
+            "description": "MySQL慢查询"
+        },
+        {
+            "name": "mysql_connection_error",
+            "pattern": "Access denied for user",
+            "level": "warning",
+            "description": "MySQL连接被拒绝"
+        },
+        {
+            "name": "mysql_crash",
+            "pattern": "mysqld_safe Number of processes running now: 0",
+            "level": "critical",
+            "description": "MySQL服务崩溃"
+        },
+        {
+            "name": "high_cpu_usage",
+            "pattern": "CPU usage is over 90%",
+            "level": "critical",
+            "description": "CPU使用率过高"
+        },
+        {
+            "name": "high_memory_usage",
+            "pattern": "Out of memory",
+            "level": "critical",
+            "description": "内存不足"
+        },
+        {
+            "name": "kernel_panic",
+            "pattern": "Kernel panic - not syncing",
+            "level": "critical",
+            "description": "内核崩溃"
+        },
+        {
+            "name": "filesystem_full",
+            "pattern": "Filesystem has only \\d+% space left",
+            "level": "critical",
+            "description": "文件系统空间不足"
+        },
+        {
+            "name": "ssh_restart",
+            "pattern": "sshd.*Server listening on",
+            "level": "info",
+            "description": "SSH服务重启"
+        },
+        {
+            "name": "nginx_restart",
+            "pattern": "nginx.*started",
+            "level": "info",
+            "description": "Nginx服务重启"
+        },
+        {
+            "name": "apache_restart",
+            "pattern": "apache2.*resumed",
+            "level": "info",
+            "description": "Apache服务重启"
+        },
+        {
+            "name": "mysql_restart",
+            "pattern": "mysqld.*ready for connections",
+            "level": "info",
+            "description": "MySQL服务重启"
+        },
+        {
+            "name": "port_scan",
+            "pattern": "Port scan detected from .*",
+            "level": "critical",
+            "description": "端口扫描检测"
+        },
+        {
+            "name": "ddos_attack",
+            "pattern": "Possible DDoS attack from .*",
+            "level": "critical",
+            "description": "可能的DDoS攻击"
+        },
+        {
+            "name": "ssl_expired",
+            "pattern": "SSL certificate expired",
+            "level": "critical",
+            "description": "SSL证书过期"
+        },
+        {
+            "name": "ssl_error",
+            "pattern": "SSL handshake failed",
+            "level": "warning",
+            "description": "SSL握手失败"
+        },
+        {
+            "name": "http_attack",
+            "pattern": "HTTP attack detected: .*",
+            "level": "critical",
+            "description": "HTTP攻击检测"
+        },
+        {
+            "name": "sql_injection",
+            "pattern": "SQL injection attempt detected",
+            "level": "critical",
+            "description": "SQL注入尝试"
+        },
+        {
+            "name": "xss_attack",
+            "pattern": "XSS attack detected",
+            "level": "critical",
+            "description": "XSS攻击检测"
+        },
+        {
+            "name": "brute_force_success",
+            "pattern": "Successful brute force attack from .*",
+            "level": "critical",
+            "description": "暴力破解成功"
+        },
+        {
+            "name": "unauthorized_access",
+            "pattern": "Unauthorized access attempt",
+            "level": "critical",
+            "description": "未授权访问尝试"
+        },
+        {
+            "name": "rootkit_detected",
+            "pattern": "Possible rootkit detected",
+            "level": "critical",
+            "description": "可能的rootkit感染"
+        },
+        {
+            "name": "malware_detected",
+            "pattern": "Malware detected: .*",
+            "level": "critical",
+            "description": "恶意软件检测"
+        },
+        {
+            "name": "backdoor_detected",
+            "pattern": "Backdoor detected",
+            "level": "critical",
+            "description": "后门程序检测"
+        },
+        {
+            "name": "cron_job_failed",
+            "pattern": "CRON.*(ERROR|FAILED)",
+            "level": "warning",
+            "description": "定时任务执行失败"
+        },
+        {
+            "name": "backup_failed",
+            "pattern": "Backup failed",
+            "level": "critical",
+            "description": "备份失败"
+        },
+        {
+            "name": "backup_success",
+            "pattern": "Backup completed successfully",
+            "level": "info",
+            "description": "备份成功"
+        },
+        {
+            "name": "disk_failure",
+            "pattern": "disk failure detected",
+            "level": "critical",
+            "description": "磁盘故障"
+        },
+        {
+            "name": "raid_degraded",
+            "pattern": "RAID.*degraded",
+            "level": "critical",
+            "description": "RAID降级"
+        },
+        {
+            "name": "raid_failure",
+            "pattern": "RAID.*failure",
+            "level": "critical",
+            "description": "RAID故障"
+        },
+        {
+            "name": "network_down",
+            "pattern": "Network interface .* down",
+            "level": "critical",
+            "description": "网络接口断开"
+        },
+        {
+            "name": "high_network_traffic",
+            "pattern": "High network traffic detected",
+            "level": "warning",
+            "description": "网络流量过高"
+        },
+        {
+            "name": "dns_error",
+            "pattern": "DNS.*error",
+            "level": "warning",
+            "description": "DNS错误"
+        },
+        {
+            "name": "ntp_error",
+            "pattern": "NTP.*error",
+            "level": "warning",
+            "description": "NTP时间同步错误"
+        },
+        {
+            "name": "ldap_error",
+            "pattern": "LDAP.*error",
+            "level": "warning",
+            "description": "LDAP错误"
+        },
+        {
+            "name": "kerberos_error",
+            "pattern": "Kerberos.*error",
+            "level": "warning",
+            "description": "Kerberos错误"
+        },
+        {
+            "name": "samba_error",
+            "pattern": "SAMBA.*error",
+            "level": "warning",
+            "description": "Samba错误"
+        },
+        {
+            "name": "ftp_attack",
+            "pattern": "FTP.*attack",
+            "level": "critical",
+            "description": "FTP攻击检测"
+        },
+        {
+            "name": "ftp_failed_login",
+            "pattern": "FTP.*failed login",
+            "level": "warning",
+            "description": "FTP登录失败"
+        },
+        {
+            "name": "ftp_successful_login",
+            "pattern": "FTP.*successful login",
+            "level": "info",
+            "description": "FTP登录成功"
+        },
+        {
+            "name": "ssh_tunnel",
+            "pattern": "SSH tunnel established",
+            "level": "info",
+            "description": "SSH隧道建立"
+        },
+        {
+            "name": "vpn_connection",
+            "pattern": "VPN.*connected",
+            "level": "info",
+            "description": "VPN连接建立"
+        },
+        {
+            "name": "vpn_disconnection",
+            "pattern": "VPN.*disconnected",
+            "level": "warning",
+            "description": "VPN连接断开"
+        },
+        {
+            "name": "web_shell_detected",
+            "pattern": "Web shell detected",
+            "level": "critical",
+            "description": "Webshell检测"
+        },
+        {
+            "name": "php_exploit",
+            "pattern": "PHP exploit attempt",
+            "level": "critical",
+            "description": "PHP漏洞利用尝试"
+        },
+        {
+            "name": "java_exploit",
+            "pattern": "Java exploit attempt",
+            "level": "critical",
+            "description": "Java漏洞利用尝试"
+        },
+        {
+            "name": "buffer_overflow",
+            "pattern": "Buffer overflow attempt",
+            "level": "critical",
+            "description": "缓冲区溢出尝试"
+        },
+        {
+            "name": "privilege_escalation",
+            "pattern": "Privilege escalation attempt",
+            "level": "critical",
+            "description": "权限提升尝试"
+        },
+        {
+            "name": "firewall_alert",
+            "pattern": "Firewall alert: .*",
+            "level": "warning",
+            "description": "防火墙告警"
+        },
+        {
+            "name": "ids_alert",
+            "pattern": "IDS alert: .*",
+            "level": "critical",
+            "description": "入侵检测系统告警"
+        },
+        {
+            "name": "ips_alert",
+            "pattern": "IPS alert: .*",
+            "level": "critical",
+            "description": "入侵防御系统告警"
+        },
+        {
+            "name": "antivirus_alert",
+            "pattern": "Antivirus alert: .*",
+            "level": "critical",
+            "description": "杀毒软件告警"
+        },
+        {
+            "name": "database_restore",
+            "pattern": "Database restore completed",
+            "level": "info",
+            "description": "数据库恢复完成"
+        },
+        {
+            "name": "database_backup",
+            "pattern": "Database backup completed",
+            "level": "info",
+            "description": "数据库备份完成"
+        },
+        {
+            "name": "database_corruption",
+            "pattern": "Database corruption detected",
+            "level": "critical",
+            "description": "数据库损坏"
+        },
+        {
+            "name": "database_slow",
+            "pattern": "Database slow response",
+            "level": "warning",
+            "description": "数据库响应缓慢"
+        },
+        {
+            "name": "redis_attack",
+            "pattern": "Redis attack attempt",
+            "level": "critical",
+            "description": "Redis攻击尝试"
+        },
+        {
+            "name": "mongodb_attack",
+            "pattern": "MongoDB attack attempt",
+            "level": "critical",
+            "description": "MongoDB攻击尝试"
+        },
+        {
+            "name": "postgresql_attack",
+            "pattern": "PostgreSQL attack attempt",
+            "level": "critical",
+            "description": "PostgreSQL攻击尝试"
+        },
+        {
+            "name": "oracle_attack",
+            "pattern": "Oracle attack attempt",
+            "level": "critical",
+            "description": "Oracle攻击尝试"
+        },
+        {
+            "name": "sqlserver_attack",
+            "pattern": "SQL Server attack attempt",
+            "level": "critical",
+            "description": "SQL Server攻击尝试"
+        },
+        {
+            "name": "elasticsearch_attack",
+            "pattern": "Elasticsearch attack attempt",
+            "level": "critical",
+            "description": "Elasticsearch攻击尝试"
+        },
+        {
+            "name": "rabbitmq_attack",
+            "pattern": "RabbitMQ attack attempt",
+            "level": "critical",
+            "description": "RabbitMQ攻击尝试"
+        },
+        {
+            "name": "kafka_attack",
+            "pattern": "Kafka attack attempt",
+            "level": "critical",
+            "description": "Kafka攻击尝试"
+        },
+        {
+            "name": "zookeeper_attack",
+            "pattern": "Zookeeper attack attempt",
+            "level": "critical",
+            "description": "Zookeeper攻击尝试"
+        },
+        {
+            "name": "docker_attack",
+            "pattern": "Docker attack attempt",
+            "level": "critical",
+            "description": "Docker攻击尝试"
+        },
+        {
+            "name": "kubernetes_attack",
+            "pattern": "Kubernetes attack attempt",
+            "level": "critical",
+            "description": "Kubernetes攻击尝试"
+        },
+        {
+            "name": "aws_breach",
+            "pattern": "AWS security breach detected",
+            "level": "critical",
+            "description": "AWS安全漏洞检测"
+        },
+        {
+            "name": "azure_breach",
+            "pattern": "Azure security breach detected",
+            "level": "critical",
+            "description": "Azure安全漏洞检测"
+        },
+        {
+            "name": "gcp_breach",
+            "pattern": "GCP security breach detected",
+            "level": "critical",
+            "description": "GCP安全漏洞检测"
+        },
+        {
+            "name": "cloudflare_alert",
+            "pattern": "Cloudflare security alert",
+            "level": "critical",
+            "description": "Cloudflare安全告警"
+        },
+        {
+            "name": "cdn_attack",
+            "pattern": "CDN attack detected",
+            "level": "critical",
+            "description": "CDN攻击检测"
+        },
+        {
+            "name": "waf_alert",
+            "pattern": "WAF alert: .*",
+            "level": "critical",
+            "description": "Web应用防火墙告警"
+        },
+        {
+            "name": "api_attack",
+            "pattern": "API attack detected",
+            "level": "critical",
+            "description": "API攻击检测"
+        },
+        {
+            "name": "graphql_attack",
+            "pattern": "GraphQL attack detected",
+            "level": "critical",
+            "description": "GraphQL攻击检测"
+        },
+        {
+            "name": "rest_attack",
+            "pattern": "REST API attack detected",
+            "level": "critical",
+            "description": "REST API攻击检测"
+        },
+        {
+            "name": "soap_attack",
+            "pattern": "SOAP attack detected",
+            "level": "critical",
+            "description": "SOAP攻击检测"
+        },
+        {
+            "name": "grpc_attack",
+            "pattern": "gRPC attack detected",
+            "level": "critical",
+            "description": "gRPC攻击检测"
+        },
+        {
+            "name": "websocket_attack",
+            "pattern": "WebSocket attack detected",
+            "level": "critical",
+            "description": "WebSocket攻击检测"
+        },
+        {
+            "name": "microservice_attack",
+            "pattern": "Microservice attack detected",
+            "level": "critical",
+            "description": "微服务攻击检测"
+        },
+        {
+            "name": "serverless_attack",
+            "pattern": "Serverless attack detected",
+            "level": "critical",
+            "description": "无服务架构攻击检测"
+        },
+        {
+            "name": "iot_attack",
+            "pattern": "IoT attack detected",
+            "level": "critical",
+            "description": "物联网攻击检测"
+        },
+        {
+            "name": "blockchain_attack",
+            "pattern": "Blockchain attack detected",
+            "level": "critical",
+            "description": "区块链攻击检测"
+        },
+        {
+            "name": "ai_attack",
+            "pattern": "AI attack detected",
+            "level": "critical",
+            "description": "人工智能攻击检测"
+        },
+        {
+            "name": "ml_attack",
+            "pattern": "Machine learning attack detected",
+            "level": "critical",
+            "description": "机器学习攻击检测"
+        },
+        {
+            "name": "bigdata_attack",
+            "pattern": "Big data attack detected",
+            "level": "critical",
+            "description": "大数据攻击检测"
+        },
+        {
+            "name": "quantum_attack",
+            "pattern": "Quantum attack detected",
+            "level": "critical",
+            "description": "量子计算攻击检测"
+        }
+    ]
+}

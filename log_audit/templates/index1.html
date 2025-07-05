@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux日志审计系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .log-entry {
+            font-family: monospace;
+            margin-bottom: 5px;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .log-entry:hover {
+            transform: translateX(2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .log-critical {
+            background-color: #ffdddd;
+            border-left: 4px solid #dc3545;
+        }
+        .log-warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+        .log-info {
+            background-color: #e7f5ff;
+            border-left: 4px solid #0d6efd;
+        }
+        #logStream {
+            height: 500px;
+            overflow-y: auto;
+            position: relative;
+        }
+        #logViewport {
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        #logContent {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+        }
+        .service-card {
+            transition: all 0.3s;
+        }
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .delete-service {
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+        .list-group-item:hover .delete-service {
+            opacity: 1;
+        }
+        .filter-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .log-highlight {
+            background-color: yellow;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+        #logLoading {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255,255,255,0.8);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">
+                    <i class="bi bi-shield-lock"></i> Linux日志审计系统
+                </a>
+                <div class="d-flex">
+                    <button class="btn btn-sm btn-success me-2" data-bs-toggle="modal" data-bs-target="#addServiceModal">
+                        <i class="bi bi-plus-circle"></i> 添加服务
+                    </button>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                        <i class="bi bi-gear"></i> 设置
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <i class="bi bi-speedometer2"></i> 系统概览
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>运行中服务:</span>
+                            <span class="badge bg-success" id="runningServices">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>今日警报:</span>
+                            <span class="badge bg-danger" id="todayAlerts">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>未处理告警:</span>
+                            <span class="badge bg-warning" id="unresolvedAlerts">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>审计规则:</span>
+                            <span class="badge bg-info" id="totalRules">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-collection"></i> 服务列表</span>
+                        <button class="btn btn-sm btn-outline-light" onclick="refreshServices()">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush" id="serviceList">
+                            <!-- 动态生成的服务列表 -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <i class="bi bi-filter-square"></i> 快速筛选
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">日志级别</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="logLevelQuick" id="logLevelAll" autocomplete="off" checked>
+                                <label class="btn btn-outline-primary" for="logLevelAll">全部</label>
+
+                                <input type="radio" class="btn-check" name="logLevelQuick" id="logLevelCritical" autocomplete="off">
+                                <label class="btn btn-outline-danger" for="logLevelCritical">严重</label>
+
+                                <input type="radio" class="btn-check" name="logLevelQuick" id="logLevelWarning" autocomplete="off">
+                                <label class="btn btn-outline-warning" for="logLevelWarning">警告</label>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary w-100" onclick="applyQuickFilters()">
+                            <i class="bi bi-funnel"></i> 应用筛选
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-9">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-list-ul"></i> 日志查询</span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-light me-2" onclick="refreshLogs()">
+                                <i class="bi bi-arrow-clockwise"></i> 刷新
+                            </button>
+                            <button class="btn btn-sm btn-outline-light" onclick="exportLogs()">
+                                <i class="bi bi-download"></i> 导出
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="filter-section">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label for="logLevelFilter" class="form-label">日志级别</label>
+                                    <select class="form-select" id="logLevelFilter">
+                                        <option value="all">所有级别</option>
+                                        <option value="critical">严重</option>
+                                        <option value="warning">警告</option>
+                                        <option value="info">信息</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="searchText" class="form-label">关键词搜索</label>
+                                    <input type="text" class="form-control" id="searchText" placeholder="输入搜索词">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="dateFrom" class="form-label">开始日期</label>
+                                    <input type="datetime-local" class="form-control" id="dateFrom">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="dateTo" class="form-label">结束日期</label>
+                                    <input type="datetime-local" class="form-control" id="dateTo">
+                                </div>
+                                <div class="col-md-12 d-flex justify-content-end">
+                                    <button class="btn btn-primary me-2" id="searchBtn" onclick="loadAlerts()">
+                                        <i class="bi bi-search"></i> 搜索
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="resetFilters()">
+                                        <i class="bi bi-x-circle"></i> 重置
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="logStream">
+                            <div id="logViewport">
+                                <div id="logContent"></div>
+                            </div>
+                            <div id="logLoading" class="text-center py-3" style="display: none;">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">加载中...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <nav id="logPagination" class="d-flex justify-content-center mt-3"></nav>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-graph-up"></i> 安全事件统计</span>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-light active" data-range="day">今日</button>
+                            <button class="btn btn-outline-light" data-range="week">本周</button>
+                            <button class="btn btn-outline-light" data-range="month">本月</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <canvas id="alertChart" height="200"></canvas>
+                            </div>
+                            <div class="col-md-6">
+                                <canvas id="serviceChart" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加服务日志模态框 -->
+    <div class="modal fade" id="addServiceModal" tabindex="-1" aria-labelledby="addServiceModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addServiceModalLabel">添加服务日志审计</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="serviceForm">
+              <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="serviceName" class="form-label">服务名称 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="serviceName" required>
+                    <div class="invalid-feedback">请输入服务名称</div>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="serviceType" class="form-label">服务类型</label>
+                    <select class="form-select" id="serviceType">
+                      <option value="application">应用程序</option>
+                      <option value="system">系统服务</option>
+                      <option value="database">数据库</option>
+                      <option value="network">网络设备</option>
+                    </select>
+                  </div>
+              </div>
+              <div class="mb-3">
+                <label for="logPath" class="form-label">日志路径 <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <input type="text" class="form-control" id="logPath" placeholder="/var/log/your-service.log" required>
+                  <button class="btn btn-outline-secondary" type="button" onclick="testLogPath()">测试路径</button>
+                </div>
+                <div class="invalid-feedback">请输入有效的日志路径</div>
+                <small class="text-muted">支持通配符，如 /var/log/nginx/*.log</small>
+              </div>
+              <div class="mb-3">
+                <label for="logFormat" class="form-label">日志格式</label>
+                <select class="form-select" id="logFormat">
+                  <option value="syslog">Syslog标准格式</option>
+                  <option value="json">JSON格式</option>
+                  <option value="nginx">Nginx访问日志</option>
+                  <option value="apache">Apache访问日志</option>
+                  <option value="custom">自定义正则</option>
+                </select>
+              </div>
+              <div class="mb-3" id="customRegexContainer" style="display: none;">
+                <label for="customRegex" class="form-label">自定义正则表达式
+                  <span class="badge bg-secondary">格式: 名称|正则|级别</span>
+                  <button type="button" class="btn btn-sm btn-outline-info ms-2" onclick="showRegexHelp()">示例</button>
+                </label>
+                <div class="bg-light border rounded p-2">
+                  <textarea class="form-control font-monospace" rows="5" id="customRegex" spellcheck="false"
+                    placeholder="示例:
+错误日志|ERROR.*|critical
+登录成功|Login OK|info"></textarea>
+                  <small class="text-muted">支持多行，每行格式为：规则名称 | 正则表达式 | 级别（critical / warning / info）</small>
+                </div>
+              </div>
+              <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="autoStart" checked>
+                <label class="form-check-label" for="autoStart">添加后立即开始监控</label>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-primary" id="saveServiceBtn">保存服务</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 日志详情模态框 -->
+    <div class="modal fade" id="logDetailModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">日志详情</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">时间</label>
+                <div id="logDetailTime" class="form-control-plaintext"></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">服务</label>
+                <div id="logDetailService" class="form-control-plaintext"></div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">级别</label>
+                <div id="logDetailLevel" class="form-control-plaintext"></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">规则</label>
+                <div id="logDetailRule" class="form-control-plaintext"></div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">原始日志</label>
+              <pre id="logDetailRaw" class="p-3 bg-light rounded" style="max-height: 300px; overflow: auto;"></pre>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">上下文日志</label>
+              <div id="logContext" class="p-2 bg-light rounded" style="max-height: 150px; overflow: auto;">
+                <div class="spinner-border spinner-border-sm" role="status">
+                  <span class="visually-hidden">加载中...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            <button type="button" class="btn btn-primary" id="resolveAlertBtn">标记为已处理</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title">确认删除</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            您确定要删除此服务吗？这将停止日志监控并删除所有相关警报记录。
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">确认删除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 设置模态框 -->
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">系统设置</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="settingsForm">
+              <div class="mb-3">
+                <label for="refreshInterval" class="form-label">自动刷新间隔 (秒)</label>
+                <input type="number" class="form-control" id="refreshInterval" min="5" max="3600" value="30">
+              </div>
+              <div class="mb-3">
+                <label for="pageSize" class="form-label">每页显示日志数</label>
+                <input type="number" class="form-control" id="pageSize" min="10" max="500" value="50">
+              </div>
+              <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="enableSound" checked>
+                <label class="form-check-label" for="enableSound">启用声音通知</label>
+              </div>
+              <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="darkMode">
+                <label class="form-check-label" for="darkMode">暗色模式</label>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-primary" id="saveSettingsBtn">保存设置</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast通知容器 -->
+    <div id="toastContainer" class="position-fixed bottom-0 end-0 p-3" style="z-index: 11"></div>
+
+    <!-- 音频元素用于通知声音 -->
+    <audio id="alertSound" src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3" preload="auto"></audio>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.0.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.2.0"></script>
+    <script>
+// 全局变量
+let currentPage = 1;
+let currentServiceId = null;
+let alertChart, serviceChart;
+let logVirtualScroll;
+let refreshTimer;
+let settings = {
+    refreshInterval: 30,
+    pageSize: 50,
+    enableSound: true,
+    darkMode: false
+};
+let currentLogDetail = null;
+
+// 初始化应用
+document.addEventListener('DOMContentLoaded', function () {
+    loadSettings();
+    initVirtualScroll();
+    initCharts();
+    loadServices();
+    loadAlerts();
+    setupEventListeners();
+    loadStats();
+    startAutoRefresh();
+});
+
+// 虚拟滚动实现
+function initVirtualScroll() {
+    logVirtualScroll = {
+        container: document.getElementById('logStream'),
+        viewport: document.getElementById('logViewport'),
+        content: document.getElementById('logContent'),
+        loadingIndicator: document.getElementById('logLoading'),
+        items: [],
+        itemHeight: 50,
+
+        setItems: function(items) {
+            this.items = items;
+            this.content.style.height = `${this.items.length * this.itemHeight}px`;
+            this.renderVisibleItems();
+        },
+
+        renderVisibleItems: function() {
+            const scrollTop = this.container.scrollTop;
+            const viewportHeight = this.viewport.clientHeight;
+
+            const startIndex = Math.floor(scrollTop / this.itemHeight);
+            const endIndex = Math.min(
+                startIndex + Math.ceil(viewportHeight / this.itemHeight) + 2,
+                this.items.length
+            );
+
+            const visibleItems = this.items.slice(startIndex, endIndex);
+
+            this.content.innerHTML = '';
+            this.content.style.transform = `translateY(${startIndex * this.itemHeight}px)`;
+
+            visibleItems.forEach((item, index) => {
+                const element = createLogElement(item);
+                element.style.position = 'absolute';
+                element.style.top = `${index * this.itemHeight}px`;
+                element.style.width = '100%';
+                this.content.appendChild(element);
+            });
+        },
+
+        showLoading: function(show) {
+            this.loadingIndicator.style.display = show ? 'block' : 'none';
+        }
+    };
+
+    logVirtualScroll.container.addEventListener('scroll', function() {
+        logVirtualScroll.renderVisibleItems();
+    });
+}
+
+// 图表初始化
+function initCharts() {
+    alertChart = new Chart(document.getElementById('alertChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ['严重', '警告', '信息'],
+            datasets: [{
+                label: '安全事件统计',
+                data: [0, 0, 0],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(54, 162, 235, 0.7)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.raw}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+
+    serviceChart = new Chart(document.getElementById('serviceChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: [],
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            return `${label}: ${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            cutout: '65%'
+        }
+    });
+}
+
+// 加载服务列表
+async function loadServices() {
+    try {
+        const response = await fetch('/api/services');
+        if (!response.ok) throw new Error('响应状态不正确');
+        const services = await response.json();
+        renderServiceList(services);
+        updateRunningServicesCount(services);
+    } catch (error) {
+        console.error('加载服务失败:', error);
+        showToast('加载服务列表失败', 'danger');
+    }
+}
+
+function renderServiceList(services) {
+    const serviceList = document.getElementById('serviceList');
+    serviceList.innerHTML = '';
+
+    // 全部日志项
+    const allItem = document.createElement('div');
+    allItem.className = `list-group-item list-group-item-action d-flex justify-content-between align-items-center ${currentServiceId === 'all' || !currentServiceId ? 'active' : ''}`;
+    allItem.innerHTML = `
+        <div class="d-flex align-items-center" style="flex-grow: 1;">
+            <i class="bi bi-collection me-2"></i>
+            <span style="flex-grow: 1; cursor: pointer; font-weight: bold;">全部日志</span>
+            <span class="badge bg-primary rounded-pill me-2">${services.length}</span>
+        </div>
+    `;
+    allItem.querySelector('span').addEventListener('click', () => filterLogsByService('all'));
+    serviceList.appendChild(allItem);
+
+    // 各个服务项
+    services.forEach(service => {
+        const serviceItem = document.createElement('div');
+        serviceItem.className = `list-group-item list-group-item-action d-flex justify-content-between align-items-center ${currentServiceId === service.id ? 'active' : ''}`;
+        serviceItem.innerHTML = `
+            <div class="d-flex align-items-center" style="flex-grow: 1;">
+                <i class="bi bi-${getServiceIcon(service.type)} me-2"></i>
+                <span style="flex-grow: 1; cursor: pointer;">${service.name}</span>
+                <span class="badge ${getServiceBadgeClass(service)} rounded-pill me-2">
+                    ${getServiceStatusText(service)}
+                </span>
+                <button class="btn btn-sm btn-outline-danger delete-service" data-id="${service.id}">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `;
+        serviceItem.querySelector('span').addEventListener('click', () => filterLogsByService(service.id));
+        serviceItem.querySelector('.delete-service').addEventListener('click', (e) => {
+            e.stopPropagation();
+            showDeleteConfirm(e.currentTarget.getAttribute('data-id'));
+        });
+        serviceList.appendChild(serviceItem);
+    });
+}
+
+function getServiceIcon(serviceType) {
+    const icons = {
+        'application': 'app',
+        'system': 'pc-display',
+        'database': 'database',
+        'network': 'router'
+    };
+    return icons[serviceType] || 'server';
+}
+
+function getServiceBadgeClass(service) {
+    if (!service.active) return 'bg-secondary';
+    if (service.completed) return 'bg-info';
+    return service.has_alerts ? 'bg-danger' : 'bg-success';
+}
+
+function getServiceStatusText(service) {
+    if (!service.active) return '已停止';
+    if (service.completed) return '已完成';
+    return service.has_alerts ? '告警' : '运行中';
+}
+
+// 加载告警日志
+async function loadAlerts(page = 1, serviceId = currentServiceId) {
+    currentPage = page;
+    currentServiceId = serviceId;
+
+    const level = document.getElementById('logLevelFilter').value;
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+    const searchText = document.getElementById('searchText').value;
+
+    let url = `/api/alerts?page=${page}&per_page=${settings.pageSize}`;
+    if (serviceId && serviceId !== 'all') url += `&service_id=${serviceId}`;
+    if (level !== 'all') url += `&level=${level}`;
+    if (dateFrom) url += `&from=${encodeURIComponent(dateFrom)}`;
+    if (dateTo) url += `&to=${encodeURIComponent(dateTo)}`;
+    if (searchText) url += `&search=${encodeURIComponent(searchText)}`;
+
+    logVirtualScroll.showLoading(true);
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('响应状态不正确');
+        const data = await response.json();
+
+        logVirtualScroll.setItems(data.items || []);
+        updatePagination(data);
+        if (data.stats) updateStats(data.stats);
+    } catch (error) {
+        console.error('加载告警信息失败:', error);
+        showToast('加载告警信息失败', 'danger');
+    } finally {
+        logVirtualScroll.showLoading(false);
+    }
+}
+
+// 创建日志元素
+function createLogElement(log) {
+    const logElement = document.createElement('div');
+    logElement.className = `log-entry log-${log.level || 'info'}`;
+    logElement.setAttribute('data-service-id', log.service_id);
+    logElement.setAttribute('data-log-id', log.id);
+
+    // 高亮搜索关键词
+    let message = log.message;
+    const searchText = document.getElementById('searchText').value;
+    if (searchText) {
+        const regex = new RegExp(`(${escapeRegExp(searchText)})`, 'gi');
+        message = message.replace(regex, '<span class="log-highlight">$1</span>');
+    }
+
+    logElement.innerHTML = `
+        <small class="text-muted">[${formatDateTime(log.timestamp)}]</small>
+        <strong>${log.service || 'system'}</strong>: ${message}
+        ${log.rule ? `<span class="badge bg-danger float-end">${log.rule}</span>` : ''}
+    `;
+    logElement.addEventListener('click', () => showLogDetail(log));
+    return logElement;
+}
+
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function formatDateTime(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleString();
+}
+
+// 更新分页
+function updatePagination(data) {
+    const pagination = document.getElementById('logPagination');
+    pagination.innerHTML = '';
+
+    if (data.total_pages <= 1) return;
+
+    const ul = document.createElement('ul');
+    ul.className = 'pagination';
+
+    // 上一页
+    ul.appendChild(createPageItem('上一页', data.page > 1, () => loadAlerts(data.page - 1));
+
+    // 页码
+    const startPage = Math.max(1, data.page - 2);
+    const endPage = Math.min(data.total_pages, data.page + 2);
+
+    if (startPage > 1) {
+        ul.appendChild(createPageItem('1', false, () => loadAlerts(1)));
+        if (startPage > 2) {
+            ul.appendChild(createPageItem('...', false));
+        }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        ul.appendChild(createPageItem(i.toString(), i === data.page, () => loadAlerts(i)));
+    }
+
+    if (endPage < data.total_pages) {
+        if (endPage < data.total_pages - 1) {
+            ul.appendChild(createPageItem('...', false));
+        }
+        ul.appendChild(createPageItem(data.total_pages.toString(), false, () => loadAlerts(data.total_pages)));
+    }
+
+    // 下一页
+    ul.appendChild(createPageItem('下一页', data.page < data.total_pages, () => loadAlerts(data.page + 1)));
+
+    pagination.appendChild(ul);
+}
+
+function createPageItem(text, active, onClick) {
+    const li = document.createElement('li');
+    li.className = `page-item ${active ? 'active' : ''}`;
+
+    const a = document.createElement('a');
+    a.className = 'page-link';
+    a.href = '#';
+    a.textContent = text;
+
+    if (onClick) {
+        a.addEventListener('click', (e) => {
+            e.preventDefault();
+            onClick();
+        });
+    }
+
+    li.appendChild(a);
+    return li;
+}
+
+// 更新统计信息
+function updateStats(stats) {
+    if (!stats) return;
+
+    document.getElementById('runningServices').textContent = stats.running_services || 0;
+    document.getElementById('todayAlerts').textContent = stats.today_alerts || 0;
+    document.getElementById('unresolvedAlerts').textContent = stats.unresolved_alerts || 0;
+    document.getElementById('totalRules').textContent = stats.total_rules || 0;
+
+    // 更新图表
+    if (alertChart) {
+        alertChart.data.datasets[0].data = [
+            stats.critical_count || 0,
+            stats.warning_count || 0,
+            stats.info_count || 0
+        ];
+        alertChart.update();
+    }
+
+    if (serviceChart && stats.services) {
+        serviceChart.data.labels = stats.services.map(s => s.name);
+        serviceChart.data.datasets[0].data = stats.services.map(s => s.alert_count || 0);
+        serviceChart.update();
+    }
+}
+
+// 加载统计信息
+async function loadStats() {
+    try {
+        const response = await fetch('/api/stats/overview');
+        if (!response.ok) throw new Error('响应状态不正确');
+        const stats = await response.json();
+        updateStats(stats);
+    } catch (error) {
+        console.error('加载统计信息失败:', error);
+        showToast('加载统计信息失败', 'danger');
+    }
+}
+
+// 显示日志详情
+async function showLogDetail(log) {
+    currentLogDetail = log;
+
+    document.getElementById('logDetailTime').textContent = formatDateTime(log.timestamp);
+    document.getElementById('logDetailService').textContent = log.service || '未知服务';
+    document.getElementById('logDetailLevel').textContent = log.level || 'info';
+    document.getElementById('logDetailRule').textContent = log.rule || '无匹配规则';
+    document.getElementById('logDetailRaw').textContent = log.raw || log.message;
+
+    // 加载上下文日志
+    const logContext = document.getElementById('logContext');
+    logContext.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">加载中...</span></div>';
+
+    try {
+        const response = await fetch(`/api/logs/${log.id}/context`);
+        if (!response.ok) throw new Error('响应状态不正确');
+        const context = await response.json();
+
+        let html = '';
+        if (context.before) {
+            html += '<div class="text-muted mb-2">之前的日志:</div>';
+            context.before.forEach(line => {
+                html += `<div class="small text-muted mb-1">${line}</div>`;
+            });
+        }
+
+        html += '<div class="fw-bold my-2">当前日志:</div>';
+        html += `<div class="mb-2">${log.raw || log.message}</div>`;
+
+        if (context.after) {
+            html += '<div class="text-muted mt-2 mb-2">之后的日志:</div>';
+            context.after.forEach(line => {
+                html += `<div class="small text-muted mb-1">${line}</div>`;
+            });
+        }
+
+        logContext.innerHTML = html;
+    } catch (error) {
+        console.error('加载上下文日志失败:', error);
+        logContext.innerHTML = '<div class="text-danger">加载上下文日志失败</div>';
+    }
+
+    // 更新标记为已处理按钮状态
+    const resolveBtn = document.getElementById('resolveAlertBtn');
+    resolveBtn.disabled = log.resolved;
+    resolveBtn.textContent = log.resolved ? '已处理' : '标记为已处理';
+    resolveBtn.className = log.resolved ? 'btn btn-success' : 'btn btn-primary';
+
+    const modal = new bootstrap.Modal(document.getElementById('logDetailModal'));
+    modal.show();
+}
+
+// 标记告警为已处理
+async function resolveAlert() {
+    if (!currentLogDetail) return;
+
+    try {
+        const response = await fetch(`/api/alerts/${currentLogDetail.id}/resolve`, {
+            method: 'POST'
+        });
+
+        if (!response.ok) throw new Error('响应状态不正确');
+
+        const result = await response.json();
+        showToast(result.message || '告警已标记为已处理', 'success');
+
+        // 更新UI
+        document.getElementById('resolveAlertBtn').disabled = true;
+        document.getElementById('resolveAlertBtn').textContent = '已处理';
+        document.getElementById('resolveAlertBtn').className = 'btn btn-success';
+
+        // 刷新列表
+        loadAlerts(currentPage, currentServiceId);
+        loadStats();
+    } catch (error) {
+        console.error('标记告警失败:', error);
+        showToast('标记告警失败', 'danger');
+    }
+}
+
+// 显示删除确认对话框
+function showDeleteConfirm(serviceId) {
+    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    modal.show();
+
+    document.getElementById('confirmDeleteBtn').onclick = async function () {
+        try {
+            const response = await fetch(`/api/services/${serviceId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) throw new Error('响应状态不正确');
+
+            const result = await response.json();
+            modal.hide();
+            loadServices();
+            showToast(result.message || '服务删除成功', 'success');
+
+            // 如果删除的是当前查看的服务，切换到全部日志
+            if (currentServiceId === serviceId) {
+                filterLogsByService('all');
+            }
+        } catch (error) {
+            console.error('删除服务失败:', error);
+            showToast('删除服务时出错，请检查控制台', 'danger');
+        }
+    };
+}
+
+// 保存服务
+async function saveService() {
+    const logFormat = document.getElementById('logFormat').value;
+    const customRegex = logFormat === 'custom'
+        ? document.getElementById('customRegex').value
+        : null;
+
+    if (customRegex && !validateCustomRegex(customRegex)) {
+        return;
+    }
+
+    const serviceData = {
+        name: document.getElementById('serviceName').value.trim(),
+        type: document.getElementById('serviceType').value,
+        log_path: document.getElementById('logPath').value.trim(),
+        log_format: logFormat,
+        custom_regex: customRegex,
+        auto_start: document.getElementById('autoStart').checked
+    };
+
+    if (!serviceData.name || !serviceData.log_path) {
+        showToast('服务名称和日志路径为必填项', 'warning');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/services', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(serviceData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || '响应状态不正确');
+        }
+
+        const result = await response.json();
+        showToast(result.message || '服务添加成功！', 'success');
+
+        bootstrap.Modal.getInstance(document.getElementById('addServiceModal')).hide();
+        document.getElementById('serviceForm').reset();
+        document.getElementById('customRegexContainer').style.display = 'none';
+
+        loadServices();
+        loadStats();
+    } catch (error) {
+        console.error('添加服务失败:', error);
+        showToast(`添加失败: ${error.message}`, 'danger');
+    }
+}
+
+// 验证自定义正则表达式
+function validateCustomRegex(input) {
+    if (!input) return true;
+
+    const lines = input.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        const parts = line.split('|');
+        if (parts.length !== 3) {
+            showToast(`第 ${i + 1} 行格式错误，应为 "名称|正则|级别"`, 'danger');
+            return false;
+        }
+
+        const [name, pattern, level] = parts.map(p => p.trim());
+        if (!name || !pattern || !level) {
+            showToast(`第 ${i + 1} 行存在空字段`, 'danger');
+            return false;
+        }
+
+        if (!['critical', 'warning', 'info'].includes(level.toLowerCase())) {
+            showToast(`第 ${i + 1} 行级别无效，应为 critical/warning/info`, 'danger');
+            return false;
+        }
+
+        try {
+            new RegExp(pattern);
+        } catch (e) {
+            showToast(`第 ${i + 1} 行正则语法错误`, 'danger');
+            return false;
+        }
+    }
+    return true;
+}
+
+// 显示正则帮助
+function showRegexHelp() {
+    showToast(`示例：
+登录失败|Failed login from .*|warning
+系统崩溃|Kernel panic.*|critical
+登录成功|Login OK|info
+
+格式为：名称|正则|级别（critical/warning/info）`, 'info');
+}
+
+// 测试日志路径
+async function testLogPath() {
+    const path = document.getElementById('logPath').value.trim();
+    if (!path) {
+        showToast('请输入日志路径', 'warning');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/services/test-path', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path })
+        });
+
+        if (!response.ok) throw new Error('响应状态不正确');
+
+        const result = await response.json();
+        if (result.exists) {
+            showToast('日志路径有效', 'success');
+        } else {
+            showToast('日志路径不存在或不可读', 'warning');
+        }
+    } catch (error) {
+        console.error('测试日志路径失败:', error);
+        showToast('测试日志路径失败', 'danger');
+    }
+}
+
+// 按服务筛选日志
+function filterLogsByService(serviceId) {
+    currentServiceId = serviceId;
+
+    // 更新服务列表选中状态
+    document.querySelectorAll('#serviceList .list-group-item').forEach(item => {
+        item.classList.remove('active');
+        const id = item.querySelector('.delete-service')?.getAttribute('data-id');
+        const isAll = item.textContent.includes('全部日志') && serviceId === 'all';
+        if (isAll || id === serviceId) {
+            item.classList.add('active');
+        }
+    });
+
+    loadAlerts(1, serviceId);
+}
+
+// 应用快速筛选
+function applyQuickFilters() {
+    const level = document.querySelector('input[name="logLevelQuick"]:checked').id.replace('logLevel', '').toLowerCase();
+    document.getElementById('logLevelFilter').value = level === 'all' ? 'all' : level;
+    loadAlerts(1, currentServiceId);
+}
+
+// 重置筛选条件
+function resetFilters() {
+    document.getElementById('logLevelFilter').value = 'all';
+    document.getElementById('searchText').value = '';
+    setDefaultDateRange();
+    loadAlerts(1, currentServiceId);
+}
+
+// 设置默认日期范围
+function setDefaultDateRange() {
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    document.getElementById('dateFrom').value = yesterday.toISOString().slice(0, 16);
+    document.getElementById('dateTo').value = now.toISOString().slice(0, 16);
+}
+
+// 导出日志
+function exportLogs() {
+    const level = document.getElementById('logLevelFilter').value;
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+    const searchText = document.getElementById('searchText').value;
+
+    let url = `/api/alerts/export?service_id=${currentServiceId || 'all'}`;
+    if (level !== 'all') url += `&level=${level}`;
+    if (dateFrom) url += `&from=${encodeURIComponent(dateFrom)}`;
+    if (dateTo) url += `&to=${encodeURIComponent(dateTo)}`;
+    if (searchText) url += `&search=${encodeURIComponent(searchText)}`;
+
+    window.open(url, '_blank');
+}
+
+// 刷新服务列表
+function refreshServices() {
+    loadServices();
+    showToast('服务列表已刷新', 'success');
+}
+
+// 刷新日志
+function refreshLogs() {
+    loadAlerts(currentPage, currentServiceId);
+    showToast('日志已刷新', 'success');
+}
+
+// 加载设置
+function loadSettings() {
+    const savedSettings = localStorage.getItem('logAuditSettings');
+    if (savedSettings) {
+        try {
+            settings = JSON.parse(savedSettings);
+            applySettings();
+        } catch (e) {
+            console.error('加载设置失败:', e);
+        }
+    }
+}
+
+// 保存设置
+function saveSettings() {
+    settings.refreshInterval = parseInt(document.getElementById('refreshInterval').value) || 30;
+    settings.pageSize = parseInt(document.getElementById('pageSize').value) || 50;
+    settings.enableSound = document.getElementById('enableSound').checked;
+    settings.darkMode = document.getElementById('darkMode').checked;
+
+    localStorage.setItem('logAuditSettings', JSON.stringify(settings));
+    applySettings();
+
+    const modal = bootstrap.Modal.getInstance(document.getElementById('settingsModal'));
+    modal.hide();
+
+    showToast('设置已保存', 'success');
+}
+
+// 应用设置
+function applySettings() {
+    document.getElementById('refreshInterval').value = settings.refreshInterval;
+    document.getElementById('pageSize').value = settings.pageSize;
+    document.getElementById('enableSound').checked = settings.enableSound;
+    document.getElementById('darkMode').checked = settings.darkMode;
+
+    // 应用暗色模式
+    if (settings.darkMode) {
+        document.body.classList.add('bg-dark', 'text-light');
+        document.querySelectorAll('.card').forEach(card => {
+            card.classList.add('bg-dark', 'text-light');
+        });
+    } else {
+        document.body.classList.remove('bg-dark', 'text-light');
+        document.querySelectorAll('.card').forEach(card => {
+            card.classList.remove('bg-dark', 'text-light');
+        });
+    }
+
+    // 重启自动刷新
+    stopAutoRefresh();
+    startAutoRefresh();
+}
+
+// 启动自动刷新
+function startAutoRefresh() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(() => {
+        loadAlerts(currentPage, currentServiceId);
+        loadStats();
+    }, settings.refreshInterval * 1000);
+}
+
+// 停止自动刷新
+function stopAutoRefresh() {
+    if (refreshTimer) clearInterval(refreshTimer);
+}
+
+// 显示Toast通知
+function showToast(message, type = 'success') {
+    const toastContainer = document.getElementById('toastContainer');
+    const toastId = 'toast-' + Date.now();
+
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    toast.id = toastId;
+
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+
+    // 播放声音通知
+    if (type === 'danger' || type === 'warning') {
+        playAlertSound();
+    }
+
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+
+// 播放告警声音
+function playAlertSound() {
+    if (settings.enableSound) {
+        const sound = document.getElementById('alertSound');
+        sound.currentTime = 0;
+        sound.play().catch(e => console.error('播放声音失败:', e));
+    }
+}
+
+// 设置事件监听器
+function setupEventListeners() {
+    // 日志格式变化时显示/隐藏自定义正则输入框
+    document.getElementById('logFormat').addEventListener('change', function () {
+        document.getElementById('customRegexContainer').style.display = this.value === 'custom' ? 'block' : 'none';
+    });
+
+    // 保存服务按钮
+    document.getElementById('saveServiceBtn').addEventListener('click', saveService);
+
+    // 保存设置按钮
+    document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+
+    // 标记为已处理按钮
+    document.getElementById('resolveAlertBtn').addEventListener('click', resolveAlert);
+
+    // 回车键搜索
+    document.getElementById('searchText').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            loadAlerts(1, currentServiceId);
+        }
+    });
+
+    // 图表时间范围切换
+    document.querySelectorAll('#alertChartContainer [data-range]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('#alertChartContainer [data-range]').forEach(b => {
+                b.classList.remove('active');
+            });
+            this.classList.add('active');
+            loadStats(this.dataset.range);
+        });
+    });
+}
+
+// 初始化WebSocket连接
+function initWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/alerts`);
+
+    ws.onopen = () => {
+        console.log('WebSocket连接已建立');
+    };
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'new_alert') {
+            // 如果当前查看的是全部日志或该服务日志，则刷新
+            if (currentServiceId === 'all' || currentServiceId === data.alert.service_id) {
+                loadAlerts(currentPage, currentServiceId);
+            }
+
+            // 显示通知
+            showToast(`新告警: ${data.alert.message}`, 'danger');
+
+            // 更新统计信息
+            loadStats();
+        }
+    };
+
+    ws.onclose = () => {
+        console.log('WebSocket连接已关闭，5秒后重试...');
+        setTimeout(initWebSocket, 5000);
+    };
+
+    ws.onerror = (error) => {
+        console.error('WebSocket错误:', error);
+    };
+}
+
+// 初始化WebSocket
+// initWebSocket();
+    </script>
+</body>
+</html>
